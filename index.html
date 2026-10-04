@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Кликер Тачек">
+<meta name="theme-color" content="#08090d">
+<title>🚗 Кликер Тачек</title>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+margin:0;background:linear-gradient(160deg,#07080c,#171922);
+color:white;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+min-height:100vh;user-select:none
+}
+.game{width:min(520px,100%);margin:auto;padding:18px 15px 35px}
+h1{text-align:center;margin:5px 0;font-size:31px}
+.sub{text-align:center;color:#858995;margin-bottom:18px}
+.money{text-align:center;font-size:42px;font-weight:900;color:#ffd83d;margin:12px}
+.card{
+background:#151720;border:1px solid #292d38;border-radius:22px;
+padding:15px;margin:12px 0
+}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{text-align:center;background:#20232d;border-radius:15px;padding:10px 4px}
+.stat b{display:block;font-size:19px;margin-top:4px}
+.stat span{font-size:12px;color:#8c919d}
+.car-area{text-align:center;position:relative;padding:15px 0 5px}
+.car{
+font-size:125px;background:none;border:0;cursor:pointer;
+display:block;margin:auto;transition:transform .08s
+}
+.car:active{transform:scale(.87)}
+.plus{height:34px;color:#59ff7b;font-size:26px;font-weight:900}
+button{
+font-family:inherit;border:0;border-radius:16px;padding:15px;
+font-size:16px;font-weight:800;color:white;cursor:pointer
+}
+button:disabled{opacity:.35}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.up{background:#315cff}.turbo{background:#ff6b00}
+.bonus{background:#b02cff;width:100%;margin-top:9px}
+.shop-title{font-size:20px;font-weight:900;margin-bottom:10px}
+.shop{display:grid;grid-template-columns:55px 1fr auto;align-items:center;gap:8px;
+padding:11px;border-radius:15px;background:#20232d;margin:7px 0}
+.shop .icon{font-size:37px;text-align:center}
+.shop b{display:block}
+.shop small{color:#8d929e}
+.buy{background:#343946;padding:11px 12px}
+.progress{height:9px;background:#292d37;border-radius:10px;overflow:hidden;margin-top:8px}
+.bar{height:100%;background:#ffd83d;width:0%;transition:width .2s}
+.toast{
+position:fixed;left:50%;bottom:25px;transform:translateX(-50%);
+background:#fff;color:#111;padding:12px 18px;border-radius:14px;
+font-weight:800;opacity:0;pointer-events:none;transition:.25s;z-index:10
+}
+.toast.show{opacity:1}
+.reset{background:#292d37;width:100%;margin-top:15px;color:#aaa}
+</style>
+</head>
+
+<body>
+<div class="game">
+
+<h1>🚗 КЛИКЕР ТАЧЕК</h1>
+<div class="sub">Кликай • Прокачивай • Покупай тачки</div>
+
+<div class="money">💰 <span id="money">0</span> ₽</div>
+
+<div class="card car-area">
+<button class="car" id="car">🚗</button>
+<div class="plus" id="plus"></div>
+<div>Нажимай на машину!</div>
+</div>
+
+<div class="card stats">
+<div class="stat"><span>УРОВЕНЬ</span><b id="level">1</b></div>
+<div class="stat"><span>ЗА КЛИК</span><b id="power">1</b></div>
+<div class="stat"><span>КЛИКОВ</span><b id="clicks">0</b></div>
+</div>
+
+<div class="card">
+<div class="actions">
+<button class="up" id="upgrade">🔧 +1 клик<br><small id="upgradePrice">25 ₽</small></button>
+<button class="turbo" id="turbo">⚡ +10 клик<br><small id="turboPrice">100 ₽</small></button>
+</div>
+<button class="bonus" id="bonus">🎁 ПОЛУЧИТЬ БОНУС</button>
+</div>
+
+<div class="card">
+<div class="shop-title">🏪 АВТОСАЛОН</div>
+<div id="shop"></div>
+</div>
+
+<div class="card">
+<b>🏆 Прогресс уровня</b>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div style="text-align:center;color:#888;margin-top:6px;font-size:13px">
+<span id="levelText">0 / 100</span> кликов
+</div>
+</div>
+
+<button class="reset" id="reset">♻️ Сбросить игру</button>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const cars=[
+ {id:"normal",icon:"🚗",name:"Обычная",price:0,power:1},
+ {id:"sport",icon:"🏎️",name:"Спорткар",price:500,power:5},
+ {id:"bmw",icon:"🚙",name:"Премиум",price:2500,power:15},
+ {id:"lambo",icon:"🏎️",name:"Суперкар",price:10000,power:50},
+ {id:"ferrari",icon:"🏎️",name:"Гиперкар",price:50000,power:150},
+ {id:"bugatti",icon:"🚀",name:"Бугатти",price:250000,power:500},
+ {id:"rocket",icon:"🚀",name:"Ракета",price:1000000,power:2000},
+ {id:"gold",icon:"👑",name:"Золотая",price:5000000,power:10000},
+ {id:"diamond",icon:"💎",name:"Алмазная",price:25000000,power:50000},
+ {id:"future",icon:"🛸",name:"Космотачка",price:100000000,power:250000}
+];
+
+let game={
+ money:0,
+ clicks:0,
+ power:1,
+ upgrade:25,
+ turbo:100,
+ car:"normal",
+ owned:["normal"],
+ lastBonus:0
+};
+
+const $=id=>document.getElementById(id);
+
+function save(){
+ localStorage.setItem("carClickerSave",JSON.stringify(game));
+}
+
+function load(){
+ try{
+  const x=JSON.parse(localStorage.getItem("carClickerSave"));
+  if(x) game={...game,...x};
+ }catch(e){}
+}
+
+function fmt(n){
+ return Math.floor(n).toLocaleString("ru-RU");
+}
+
+function toast(text){
+ $("toast").textContent=text;
+ $("toast").classList.add("show");
+ setTimeout(()=>$("toast").classList.remove("show"),1600);
+}
+
+function renderShop(){
+ $("shop").innerHTML=cars.map(c=>{
+  const owned=game.owned.includes(c.id);
+  const selected=game.car===c.id;
+  return `
+  <div class="shop">
+   <div class="icon">${c.icon}</div>
+   <div>
+    <b>${c.name}</b>
+    <small>+${fmt(c.power)} к клику</small>
+   </div>
+   <button class="buy" data-id="${c.id}" ${owned&&selected?"disabled":""}>
+    ${selected?"Выбрана":owned?"Выбрать":fmt(c.price)+" ₽"}
+   </button>
+  </div>`;
+ }).join("");
+
+ document.querySelectorAll(".buy").forEach(btn=>{
+  btn.addEventListener("click",()=>buyCar(btn.dataset.id));
+ });
+}
+
+function render(){
+ const c=cars.find(x=>x.id===game.car)||cars[0];
+
+ $("money").textContent=fmt(game.money);
+ $("clicks").textContent=fmt(game.clicks);
+ $("power").textContent=fmt(game.power);
+ $("car").textContent=c.icon;
+
+ const lvl=Math.floor(game.clicks/100)+1;
+ const progress=game.clicks%100;
+
+ $("level").textContent=lvl;
+ $("bar").style.width=progress+"%";
+ $("levelText").textContent=progress+" / 100";
+
+ $("upgradePrice").textContent=fmt(game.upgrade)+" ₽";
+ $("turboPrice").textContent=fmt(game.turbo)+" ₽";
+
+ $("upgrade").disabled=game.money<game.upgrade;
+ $("turbo").disabled=game.money<game.turbo;
+
+ const today=new Date().toDateString();
+ const canBonus=game.lastBonus!==today;
+ $("bonus").disabled=!canBonus;
+ $("bonus").textContent=canBonus?"🎁 ПОЛУЧИТЬ БОНУС":"✅ БОНУС УЖЕ ПОЛУЧЕН";
+
+ renderShop();
+ save();
+}
+
+function clickCar(){
+ game.money+=game.power;
+ game.clicks++;
+
+ $("plus").textContent="+"+fmt(game.power)+" ₽";
+ setTimeout(()=>$("plus").textContent="",500);
+
+ $("car").style.transform="scale(.87)";
+ setTimeout(()=>$("car").style.transform="",90);
+
+ render();
+}
+
+function buyCar(id){
+ const c=cars.find(x=>x.id===id);
+ if(!c)return;
+
+ if(game.owned.includes(id)){
+  game.car=id;
+  game.power=c.power;
+  toast(c.icon+" "+c.name+" выбрана!");
+ }else{
+  if(game.money<c.price){
+   toast("💰 Нужно ещё "+fmt(c.price-game.money)+" ₽");
+   return;
+  }
+  game.money-=c.price;
+  game.owned.push(id);
+  game.car=id;
+  game.power=c.power;
+  toast("🔥 Куплена "+c.name+"!");
+ }
+ render();
+}
+
+$("car").addEventListener("click",clickCar);
+
+$("upgrade").addEventListener("click",()=>{
+ if(game.money<game.upgrade)return;
+ game.money-=game.upgrade;
+ game.power++;
+ game.upgrade=Math.floor(game.upgrade*1.55);
+ toast("🔧 Клик улучшен!");
+ render();
+});
+
+$("turbo").addEventListener("click",()=>{
+ if(game.money<game.turbo)return;
+ game.money-=game.turbo;
+ game.power+=10;
+ game.turbo=Math.floor(game.turbo*1.9);
+ toast("⚡ ТУРБО АКТИВИРОВАНО!");
+ render();
+});
+
+$("bonus").addEventListener("click",()=>{
+ const today=new Date().toDateString();
+ if(game.lastBonus===today)return;
+
+ const reward=Math.max(500,game.power*100);
+ game.money+=reward;
+ game.lastBonus=today;
+
+ toast("🎁 Бонус: +"+fmt(reward)+" ₽");
+ render();
+});
+
+$("reset").addEventListener("click",()=>{
+ if(confirm("Точно удалить весь прогресс?")){
+  localStorage.removeItem("carClickerSave");
+  location.reload();
+ }
+});
+
+load();
+render();
+</script>
+</body>
+</html>
